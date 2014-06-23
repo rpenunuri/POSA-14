@@ -15,22 +15,26 @@ public class SimpleSemaphore {
      * Define a ReentrantLock to protect the critical section.
      */
     // TODO - you fill in here
-
+	private ReentrantLock mReentrantLock = null;
     /**
      * Define a Condition that waits while the number of permits is 0.
      */
     // TODO - you fill in here
-
+	private Condition permitCondition = null;
     /**
      * Define a count of the number of available permits.
      */
     // TODO - you fill in here. Make sure that this data member will
     // ensure its values aren't cached by multiple Threads..
-
+	private volatile int mAvailablePermits = 0;
+	
     public SimpleSemaphore(int permits, boolean fair) {
         // TODO - you fill in here to initialize the SimpleSemaphore,
         // making sure to allow both fair and non-fair Semaphore
         // semantics.
+    	mReentrantLock = new ReentrantLock(fair);
+    	permitCondition = mReentrantLock.newCondition();
+    	mAvailablePermits = permits;
     }
 
     /**
@@ -39,6 +43,16 @@ public class SimpleSemaphore {
      */
     public void acquire() throws InterruptedException {
         // TODO - you fill in here.
+    	mReentrantLock.lockInterruptibly();
+    	
+    	try {
+    		while (mAvailablePermits <= 0) {
+    			permitCondition.await();
+    		}  
+    		--mAvailablePermits;
+    	} finally { 
+    		mReentrantLock.unlock();
+    	}
     }
 
     /**
@@ -47,6 +61,16 @@ public class SimpleSemaphore {
      */
     public void acquireUninterruptibly() {
         // TODO - you fill in here.
+    	mReentrantLock.lock();
+    	
+    	try {
+    		while (mAvailablePermits <= 0) {
+    			permitCondition.awaitUninterruptibly();
+    		}  
+    		--mAvailablePermits;
+    	} finally { 
+    		mReentrantLock.unlock();
+    	}
     }
 
     /**
@@ -54,6 +78,15 @@ public class SimpleSemaphore {
      */
     void release() {
         // TODO - you fill in here.
+    	mReentrantLock.lock();
+    	try {
+    		++mAvailablePermits;
+    		if(mAvailablePermits > 0) {
+    			permitCondition.signal();
+    		}
+    	} finally {
+    		mReentrantLock.unlock();
+    	}
     }
 
     /**
@@ -61,6 +94,6 @@ public class SimpleSemaphore {
      */
     public int availablePermits() {
         // TODO - you fill in here to return the correct result
-    	return 0;
+    	return mAvailablePermits;
     }
 }
